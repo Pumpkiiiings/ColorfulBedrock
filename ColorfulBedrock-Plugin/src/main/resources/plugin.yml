@@ -1,0 +1,20 @@
+name: ColorfulBedrock
+version: 1.0.0
+main: com.pumpkings.colorfulbedrock.ColorfulBedrockPlugin
+api-version: '1.21'
+author: Pumpkings
+description: The Java Polish for Bedrock via Geyser, Floodgate and PacketEvents
+softdepend:
+  - Floodgate
+  - packetevents
+
+commands:
+  colorfulbedrock:
+    description: ColorfulBedrock administration command
+    permission: colorfulbedrock.admin
+    usage: /<command> [reload]
+
+permissions:
+  colorfulbedrock.admin:
+    description: Allows managing and reloading ColorfulBedrock
+    default: op

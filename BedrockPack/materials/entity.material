@@ -1,0 +1,14 @@
+{
+  "materials": {
+    "version": "1.0.0",
+    "name_tag:entity_alphatest": {
+      "+defines": [ "ALPHA_TEST" ],
+      "depthFunc": "LessEqual",
+      "blendSrc": "SourceAlpha",
+      "blendDst": "OneMinusSourceAlpha"
+    },
+    "name_tag_depth_tested:name_tag": {
+      "depthFunc": "LessEqual"
+    }
+  }
+}

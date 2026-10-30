@@ -1,0 +1,33 @@
+# ==========================================================
+#                   ColorfulBedrock Configuration
+#   The Java Polish for Bedrock Edition (Paper/Folia + Geyser)
+# ==========================================================
+
+# Scoreboard Settings
+scoreboard:
+  # Enable scoreboard packet adjustments for Bedrock players
+  enabled: true
+  # Convert Java RGB Hex colors and gradients into Bedrock extended palette (§0-§u)
+  convert-hex: true
+  # Strips and cleans red score numbers when paired with the Bedrock .mcpack
+  clean-numbers: true
+
+# Tab List Settings
+tablist:
+  # Enable tab list adjustments for Bedrock players
+  enabled: true
+  # Appends a formatted ping indicator (e.g. 24ms 📶) next to player names
+  format-ping: true
+  # When true, uses Unicode PUA glyphs (\uE001-\uE005) from the custom font pack
+  use-custom-glyphs: false
+
+# Holograms & Text Displays Settings
+holograms:
+  # Enable text display and hologram improvements
+  enabled: true
+  # Removes the dark translucent background box from Text Displays and Holograms (ARGB Alpha = 0)
+  remove-black-box: true
+  # Forces Java-style drop shadows on floating text
+  force-shadow: true
+  # Translates Hex colors and RGB gradients in holograms to Bedrock codes
+  convert-hex: true
