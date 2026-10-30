@@ -4,6 +4,7 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.manager.server.ServerManager;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
+import com.pumpkings.colorfulbedrock.command.TabCommand;
 import com.pumpkings.colorfulbedrock.config.PluginConfig;
 import com.pumpkings.colorfulbedrock.listener.BedrockPacketListener;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
@@ -13,10 +14,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.lang.reflect.Field;
+import java.util.UUID;
 
 public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandExecutor {
 
     private final PluginConfig pluginConfig = new PluginConfig();
+    private volatile String latestHeader = "";
+    private volatile String latestFooter = "";
 
     @Override
     public void onLoad() {
@@ -47,8 +51,21 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
                 PacketListenerPriority.NORMAL
         );
 
+        // Register /colorfulbedrock command
         if (getCommand("colorfulbedrock") != null) {
             getCommand("colorfulbedrock").setExecutor(this);
+        }
+
+        // Register /tab, /tablist, /playerlist commands
+        TabCommand tabCommand = new TabCommand(this);
+        if (getCommand("tab") != null) {
+            getCommand("tab").setExecutor(tabCommand);
+        }
+        if (getCommand("tablist") != null) {
+            getCommand("tablist").setExecutor(tabCommand);
+        }
+        if (getCommand("playerlist") != null) {
+            getCommand("playerlist").setExecutor(tabCommand);
         }
 
         getLogger().info("==========================================");
@@ -56,8 +73,54 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
         getLogger().info(" PacketEvents: v2.14.0 (Server: " + PacketEvents.getAPI().getServerManager().getVersion() + ")");
         getLogger().info(" Scoreboard Clean: " + (pluginConfig.isScoreboardCleanNumbers() ? "ON" : "OFF"));
         getLogger().info(" Hologram Polish:  " + (pluginConfig.isHologramsRemoveBlackBox() ? "ON" : "OFF"));
-        getLogger().info(" Bedrock RGB Match: ON (Extended Palette)");
+        getLogger().info(" Bedrock RGB Match: ON (Extended 27-Color Palette)");
+        getLogger().info(" Emoji Translation: ON (Native Pixel Glyphs)");
+        getLogger().info(" Tab List Function: ON (/tab & Keybind)");
         getLogger().info("==========================================");
+    }
+
+    public boolean isBedrockPlayer(UUID uuid) {
+        // 1. Direct Geyser Spigot connection
+        try {
+            if (org.geysermc.geyser.api.GeyserApi.api() != null &&
+                org.geysermc.geyser.api.GeyserApi.api().isBedrockPlayer(uuid)) {
+                return true;
+            }
+        } catch (Throwable ignored) {}
+
+        // 2. Floodgate connection
+        try {
+            Class<?> floodgateApiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+            Object instance = floodgateApiClass.getMethod("getInstance").invoke(null);
+            if (instance != null) {
+                Object result = floodgateApiClass.getMethod("isFloodgatePlayer", UUID.class).invoke(instance, uuid);
+                if (result instanceof Boolean b && b) {
+                    return true;
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        return false;
+    }
+
+    public String getLatestHeader() {
+        return latestHeader;
+    }
+
+    public void setLatestHeader(String header) {
+        this.latestHeader = header;
+    }
+
+    public String getLatestFooter() {
+        return latestFooter;
+    }
+
+    public void setLatestFooter(String footer) {
+        this.latestFooter = footer;
+    }
+
+    public PluginConfig getPluginConfig() {
+        return pluginConfig;
     }
 
     private void fixPacketEventsVersion() {
@@ -96,9 +159,5 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
         sender.sendMessage("§6[ColorfulBedrock] §7Version: §f" + getDescription().getVersion());
         sender.sendMessage("§7Use §f/colorfulbedrock reload §7to reload the configuration.");
         return true;
-    }
-
-    public PluginConfig getPluginConfig() {
-        return pluginConfig;
     }
 }

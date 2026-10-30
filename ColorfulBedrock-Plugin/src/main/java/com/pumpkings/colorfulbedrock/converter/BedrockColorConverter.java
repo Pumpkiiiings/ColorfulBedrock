@@ -9,15 +9,17 @@ import java.util.regex.Pattern;
 
 /**
  * High-performance Color Matcher for Minecraft Bedrock.
- * Quantizes 24-bit Java RGB colors and gradients to Bedrock's extended color palette.
+ * Quantizes 24-bit Java RGB colors and gradients to Bedrock's full 27-color extended palette.
  */
 public final class BedrockColorConverter {
 
     private static final Pattern HEX_PATTERN_1 = Pattern.compile("§x(§[0-9a-fA-F]){6}");
     private static final Pattern HEX_PATTERN_2 = Pattern.compile("&#([0-9a-fA-F]{6})");
     private static final Pattern HEX_PATTERN_3 = Pattern.compile("<#([0-9a-fA-F]{6})>");
+    private static final Pattern HEX_PATTERN_4 = Pattern.compile("<color:#([0-9a-fA-F]{6})>");
+    private static final Pattern TAGS_CLEANUP_PATTERN = Pattern.compile("</?(?:shadow|gradient|b|i|u|st|color)[^>]*>");
 
-    // Bedrock's extended palette: Vanilla 16 + Modern Bedrock material colors
+    // Bedrock's complete extended palette: Vanilla 16 + 11 Modern Bedrock material colors = 27 colors
     private static final Map<String, Color> BEDROCK_PALETTE;
 
     static {
@@ -41,14 +43,17 @@ public final class BedrockColorConverter {
         map.put("§f", new Color(255, 255, 255));
 
         // Extended Bedrock-native material codes
-        map.put("§g", new Color(221, 214, 5));   // Minecoin Gold
-        map.put("§h", new Color(227, 212, 209)); // Quartz
-        map.put("§m", new Color(151, 22, 7));    // Redstone
-        map.put("§p", new Color(180, 104, 77));  // Material Copper
-        map.put("§q", new Color(222, 177, 45));  // Material Gold
-        map.put("§s", new Color(71, 160, 54));   // Material Emerald
-        map.put("§t", new Color(44, 186, 168));  // Material Diamond
-        map.put("§u", new Color(68, 58, 59));    // Material Netherite
+        map.put("§g", new Color(221, 214, 5));   // Minecoin Gold (#DDD605)
+        map.put("§h", new Color(227, 212, 209)); // Material Quartz (#E3D4D1)
+        map.put("§i", new Color(206, 202, 202)); // Material Iron (#CECACA)
+        map.put("§j", new Color(68, 58, 59));    // Material Netherite (#443A3B)
+        map.put("§m", new Color(151, 22, 7));    // Material Redstone (#971607)
+        map.put("§n", new Color(180, 104, 77));  // Material Copper (#B4684D)
+        map.put("§p", new Color(222, 177, 45));  // Material Gold (#DEB12D)
+        map.put("§q", new Color(71, 160, 54));   // Material Emerald (#47A036)
+        map.put("§s", new Color(44, 186, 168));  // Material Diamond (#2CBAA8)
+        map.put("§t", new Color(33, 73, 123));   // Material Lapis (#21497B)
+        map.put("§u", new Color(154, 92, 198));  // Material Amethyst (#9A5CC6)
 
         BEDROCK_PALETTE = Collections.unmodifiableMap(map);
     }
@@ -57,7 +62,7 @@ public final class BedrockColorConverter {
 
     /**
      * Finds the closest Bedrock native color code for a given RGB Color
-     * using human eye weighted Euclidean distance.
+     * using human eye weighted Euclidean distance (Redmean formula).
      */
     public static String getClosestBedrockColor(Color color) {
         if (color == null) return "§f";
@@ -91,14 +96,17 @@ public final class BedrockColorConverter {
 
     /**
      * Translates any string containing Java Hex codes (§x§r§r§g§g§b§b, &#RRGGBB, or <#RRGGBB>)
-     * into Bedrock-compatible extended color codes.
+     * into Bedrock-compatible extended color codes and strips unsupported MiniMessage tags.
      */
     public static String translateHexToBedrock(String input) {
         if (input == null || input.isEmpty()) return input;
 
         String result = input;
 
-        // 1. Match §x§r§r§g§g§b§b
+        // 1. Clean unsupported MiniMessage / XML tags that might leak through
+        result = TAGS_CLEANUP_PATTERN.matcher(result).replaceAll("");
+
+        // 2. Match §x§r§r§g§g§b§b (Kyori Adventure hex output)
         Matcher matcher1 = HEX_PATTERN_1.matcher(result);
         StringBuffer sb1 = new StringBuffer();
         while (matcher1.find()) {
@@ -109,7 +117,7 @@ public final class BedrockColorConverter {
         matcher1.appendTail(sb1);
         result = sb1.toString();
 
-        // 2. Match &#RRGGBB
+        // 3. Match &#RRGGBB
         Matcher matcher2 = HEX_PATTERN_2.matcher(result);
         StringBuffer sb2 = new StringBuffer();
         while (matcher2.find()) {
@@ -119,7 +127,7 @@ public final class BedrockColorConverter {
         matcher2.appendTail(sb2);
         result = sb2.toString();
 
-        // 3. Match <#RRGGBB>
+        // 4. Match <#RRGGBB>
         Matcher matcher3 = HEX_PATTERN_3.matcher(result);
         StringBuffer sb3 = new StringBuffer();
         while (matcher3.find()) {
@@ -128,6 +136,16 @@ public final class BedrockColorConverter {
         }
         matcher3.appendTail(sb3);
         result = sb3.toString();
+
+        // 5. Match <color:#RRGGBB>
+        Matcher matcher4 = HEX_PATTERN_4.matcher(result);
+        StringBuffer sb4 = new StringBuffer();
+        while (matcher4.find()) {
+            Color color = hexToColor(matcher4.group(1));
+            matcher4.appendReplacement(sb4, getClosestBedrockColor(color));
+        }
+        matcher4.appendTail(sb4);
+        result = sb4.toString();
 
         return result;
     }

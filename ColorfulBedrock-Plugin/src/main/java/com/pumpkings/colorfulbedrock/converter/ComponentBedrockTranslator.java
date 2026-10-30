@@ -1,37 +1,35 @@
 package com.pumpkings.colorfulbedrock.converter;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-
-import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Translates Adventure Components into Bedrock-safe components
- * with quantized RGB colors and legacy conversion.
+ * with quantized RGB colors, translated emojis, and Bedrock section codes.
  */
 public final class ComponentBedrockTranslator {
 
-    private static final LegacyComponentSerializer SECTION_SERIALIZER = 
-            LegacyComponentSerializer.legacySection();
+    private static final LegacyComponentSerializer HEX_SERIALIZER = 
+            LegacyComponentSerializer.builder()
+                    .character('§')
+                    .hexColors()
+                    .useUnusualXRepeatedCharacterHexFormat()
+                    .build();
 
     private ComponentBedrockTranslator() {}
 
     /**
-     * Translates a Component by converting RGB colors to Bedrock codes.
+     * Translates a Component by preserving 24-bit hex, converting emojis,
+     * quantizing RGB colors to Bedrock codes, and returning a Bedrock-safe component.
      */
     public static Component translate(Component component) {
         if (component == null) return Component.empty();
 
-        // Serialize to legacy text, translate Hex to Bedrock codes, and reconstruct component
-        String legacy = SECTION_SERIALIZER.serialize(component);
-        String translated = BedrockColorConverter.translateHexToBedrock(legacy);
+        String legacy = HEX_SERIALIZER.serialize(component);
+        String emojisTranslated = EmojiTranslator.translate(legacy);
+        String bedrockFormatted = BedrockColorConverter.translateHexToBedrock(emojisTranslated);
 
-        return SECTION_SERIALIZER.deserialize(translated);
+        return Component.text(bedrockFormatted);
     }
 
     /**
@@ -39,7 +37,8 @@ public final class ComponentBedrockTranslator {
      */
     public static String toBedrockString(Component component) {
         if (component == null) return "";
-        String legacy = SECTION_SERIALIZER.serialize(component);
-        return BedrockColorConverter.translateHexToBedrock(legacy);
+        String legacy = HEX_SERIALIZER.serialize(component);
+        String emojisTranslated = EmojiTranslator.translate(legacy);
+        return BedrockColorConverter.translateHexToBedrock(emojisTranslated);
     }
 }

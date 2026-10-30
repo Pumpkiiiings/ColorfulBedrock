@@ -9,6 +9,7 @@ import com.pumpkings.colorfulbedrock.ColorfulBedrockPlugin;
 import com.pumpkings.colorfulbedrock.config.PluginConfig;
 import com.pumpkings.colorfulbedrock.converter.BedrockColorConverter;
 import com.pumpkings.colorfulbedrock.converter.ComponentBedrockTranslator;
+import com.pumpkings.colorfulbedrock.converter.EmojiTranslator;
 import com.pumpkings.colorfulbedrock.util.PingGlyphs;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
@@ -27,33 +28,6 @@ public class BedrockPacketListener implements PacketListener {
         this.config = plugin.getPluginConfig();
     }
 
-    /**
-     * Checks whether a player is connected from Bedrock Edition via Geyser or Floodgate.
-     */
-    private boolean isBedrockPlayer(UUID uuid) {
-        // 1. Direct Geyser Spigot connection
-        try {
-            if (org.geysermc.geyser.api.GeyserApi.api() != null &&
-                org.geysermc.geyser.api.GeyserApi.api().isBedrockPlayer(uuid)) {
-                return true;
-            }
-        } catch (Throwable ignored) {}
-
-        // 2. Floodgate connection
-        try {
-            Class<?> floodgateApiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
-            Object instance = floodgateApiClass.getMethod("getInstance").invoke(null);
-            if (instance != null) {
-                Object result = floodgateApiClass.getMethod("isFloodgatePlayer", UUID.class).invoke(instance, uuid);
-                if (result instanceof Boolean b && b) {
-                    return true;
-                }
-            }
-        } catch (Throwable ignored) {}
-
-        return false;
-    }
-
     @Override
     public void onPacketSend(PacketSendEvent event) {
         Object playerObj = event.getPlayer();
@@ -64,7 +38,7 @@ public class BedrockPacketListener implements PacketListener {
         UUID uuid = player.getUniqueId();
 
         // PARITY RULE: Java players always receive unmodified packets
-        if (!isBedrockPlayer(uuid)) {
+        if (!plugin.isBedrockPlayer(uuid)) {
             return;
         }
 
@@ -117,7 +91,7 @@ public class BedrockPacketListener implements PacketListener {
     private void handleUpdateScore(PacketSendEvent event) {
         try {
             WrapperPlayServerUpdateScore wrapper = new WrapperPlayServerUpdateScore(event);
-            
+
             // Modern 1.20.3+ display component
             Component displayComp = wrapper.getEntityDisplayName();
             if (displayComp != null && config.isScoreboardConvertHex()) {
@@ -127,7 +101,8 @@ public class BedrockPacketListener implements PacketListener {
             // Legacy entity name line
             String entityName = wrapper.getEntityName();
             if (entityName != null && config.isScoreboardConvertHex()) {
-                wrapper.setEntityName(BedrockColorConverter.translateHexToBedrock(entityName));
+                String emojiTranslated = EmojiTranslator.translate(entityName);
+                wrapper.setEntityName(BedrockColorConverter.translateHexToBedrock(emojiTranslated));
             }
         } catch (Throwable ignored) {}
     }
@@ -138,7 +113,7 @@ public class BedrockPacketListener implements PacketListener {
             Optional<WrapperPlayServerTeams.ScoreBoardTeamInfo> optInfo = wrapper.getTeamInfo();
             if (optInfo.isPresent() && config.isScoreboardConvertHex()) {
                 WrapperPlayServerTeams.ScoreBoardTeamInfo info = optInfo.get();
-                
+
                 Component prefix = info.getPrefix();
                 if (prefix != null) {
                     info.setPrefix(ComponentBedrockTranslator.translate(prefix));
@@ -159,17 +134,21 @@ public class BedrockPacketListener implements PacketListener {
 
     private void handleTabListHeaderFooter(PacketSendEvent event) {
         try {
-            WrapperPlayServerPlayerListHeaderAndFooter wrapper = 
+            WrapperPlayServerPlayerListHeaderAndFooter wrapper =
                     new WrapperPlayServerPlayerListHeaderAndFooter(event);
 
             Component header = wrapper.getHeader();
             if (header != null) {
-                wrapper.setHeader(ComponentBedrockTranslator.translate(header));
+                String bedrockHeader = ComponentBedrockTranslator.toBedrockString(header);
+                plugin.setLatestHeader(bedrockHeader);
+                wrapper.setHeader(Component.text(bedrockHeader));
             }
 
             Component footer = wrapper.getFooter();
             if (footer != null) {
-                wrapper.setFooter(ComponentBedrockTranslator.translate(footer));
+                String bedrockFooter = ComponentBedrockTranslator.toBedrockString(footer);
+                plugin.setLatestFooter(bedrockFooter);
+                wrapper.setFooter(Component.text(bedrockFooter));
             }
         } catch (Throwable ignored) {}
     }
@@ -182,8 +161,8 @@ public class BedrockPacketListener implements PacketListener {
 
             for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo entry : entries) {
                 Component displayName = entry.getDisplayName();
-                
-                // If display name is present, convert hex colors and inject ping glyph
+
+                // If display name is present, convert hex colors, emojis and inject ping glyph
                 if (displayName != null) {
                     Component translated = ComponentBedrockTranslator.translate(displayName);
 

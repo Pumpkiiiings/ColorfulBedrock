@@ -1,0 +1,19 @@
+{
+  "namespace": "hud",
+
+  "root_panel": {
+    "modifications": [
+      {
+        "array_name": "button_mappings",
+        "operation": "insert_back",
+        "value": [
+          {
+            "from_button_id": "button.menu_autocomplete",
+            "to_button_id": "button.menu_exit",
+            "mapping_type": "global"
+          }
+        ]
+      }
+    ]
+  }
+}

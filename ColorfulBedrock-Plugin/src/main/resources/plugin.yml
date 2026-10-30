@@ -6,6 +6,7 @@ author: Pumpkings
 description: The Java Polish for Bedrock via Geyser, Floodgate and PacketEvents
 softdepend:
   - Floodgate
+  - Geyser-Spigot
   - packetevents
 
 commands:
@@ -13,6 +14,10 @@ commands:
     description: ColorfulBedrock administration command
     permission: colorfulbedrock.admin
     usage: /<command> [reload]
+  tab:
+    description: View the Java-style server tab list
+    usage: /tab
+    aliases: [tablist, playerlist]
 
 permissions:
   colorfulbedrock.admin:

@@ -1,5 +1,7 @@
 {
   "ui_defs": [
-    "ui/scoreboards.json"
+    "ui/scoreboards.json",
+    "ui/hud_screen.json",
+    "ui/pause_screen.json"
   ]
 }
