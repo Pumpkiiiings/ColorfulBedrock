@@ -31,7 +31,7 @@ public class BedrockPacketListener implements PacketListener {
      * Checks whether a player is connected from Bedrock Edition via Geyser or Floodgate.
      */
     private boolean isBedrockPlayer(UUID uuid) {
-        // 1. Check Geyser API (Direct Spigot Geyser connection)
+        // 1. Direct Geyser Spigot connection
         try {
             if (org.geysermc.geyser.api.GeyserApi.api() != null &&
                 org.geysermc.geyser.api.GeyserApi.api().isBedrockPlayer(uuid)) {
@@ -39,7 +39,7 @@ public class BedrockPacketListener implements PacketListener {
             }
         } catch (Throwable ignored) {}
 
-        // 2. Check Floodgate API (For Proxy / Velocity / Floodgate setups)
+        // 2. Floodgate connection
         try {
             Class<?> floodgateApiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
             Object instance = floodgateApiClass.getMethod("getInstance").invoke(null);
@@ -63,15 +63,12 @@ public class BedrockPacketListener implements PacketListener {
 
         UUID uuid = player.getUniqueId();
 
-        // Check if recipient is a Bedrock player
-        boolean isBedrock = isBedrockPlayer(uuid);
-
-        // CRITICAL PARITY RULE: Java players remain untouched (receive original packets)
-        if (!isBedrock) {
+        // PARITY RULE: Java players always receive unmodified packets
+        if (!isBedrockPlayer(uuid)) {
             return;
         }
 
-        // 2. Handle Scoreboard Packets
+        // 1. Handle Scoreboard Packets
         if (config.isScoreboardEnabled()) {
             if (event.getPacketType() == PacketType.Play.Server.SCOREBOARD_OBJECTIVE) {
                 handleScoreboardObjective(event);
@@ -81,9 +78,13 @@ public class BedrockPacketListener implements PacketListener {
                 handleUpdateScore(event);
                 return;
             }
+            if (event.getPacketType() == PacketType.Play.Server.TEAMS) {
+                handleTeams(event);
+                return;
+            }
         }
 
-        // 3. Handle Tab List Packets (Header/Footer and Player Info)
+        // 2. Handle Tab List Packets
         if (config.isTablistEnabled()) {
             if (event.getPacketType() == PacketType.Play.Server.PLAYER_LIST_HEADER_AND_FOOTER) {
                 handleTabListHeaderFooter(event);
@@ -95,7 +96,7 @@ public class BedrockPacketListener implements PacketListener {
             }
         }
 
-        // 4. Handle Holograms & Text Displays
+        // 3. Handle Holograms & Text Displays
         if (config.isHologramsEnabled()) {
             if (event.getPacketType() == PacketType.Play.Server.ENTITY_METADATA) {
                 handleEntityMetadata(event);
@@ -116,9 +117,42 @@ public class BedrockPacketListener implements PacketListener {
     private void handleUpdateScore(PacketSendEvent event) {
         try {
             WrapperPlayServerUpdateScore wrapper = new WrapperPlayServerUpdateScore(event);
+            
+            // Modern 1.20.3+ display component
+            Component displayComp = wrapper.getEntityDisplayName();
+            if (displayComp != null && config.isScoreboardConvertHex()) {
+                wrapper.setEntityDisplayName(ComponentBedrockTranslator.translate(displayComp));
+            }
+
+            // Legacy entity name line
             String entityName = wrapper.getEntityName();
             if (entityName != null && config.isScoreboardConvertHex()) {
                 wrapper.setEntityName(BedrockColorConverter.translateHexToBedrock(entityName));
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void handleTeams(PacketSendEvent event) {
+        try {
+            WrapperPlayServerTeams wrapper = new WrapperPlayServerTeams(event);
+            Optional<WrapperPlayServerTeams.ScoreBoardTeamInfo> optInfo = wrapper.getTeamInfo();
+            if (optInfo.isPresent() && config.isScoreboardConvertHex()) {
+                WrapperPlayServerTeams.ScoreBoardTeamInfo info = optInfo.get();
+                
+                Component prefix = info.getPrefix();
+                if (prefix != null) {
+                    info.setPrefix(ComponentBedrockTranslator.translate(prefix));
+                }
+
+                Component suffix = info.getSuffix();
+                if (suffix != null) {
+                    info.setSuffix(ComponentBedrockTranslator.translate(suffix));
+                }
+
+                Component displayName = info.getDisplayName();
+                if (displayName != null) {
+                    info.setDisplayName(ComponentBedrockTranslator.translate(displayName));
+                }
             }
         } catch (Throwable ignored) {}
     }
@@ -147,21 +181,19 @@ public class BedrockPacketListener implements PacketListener {
             if (entries == null) return;
 
             for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo entry : entries) {
-                // Convert display name RGB to Bedrock codes
                 Component displayName = entry.getDisplayName();
+                
+                // If display name is present, convert hex colors and inject ping glyph
                 if (displayName != null) {
                     Component translated = ComponentBedrockTranslator.translate(displayName);
-                    entry.setDisplayName(translated);
-                }
 
-                // Format Ping if enabled
-                if (config.isTablistFormatPing()) {
-                    int latency = entry.getLatency();
-                    String pingText = PingGlyphs.formatPing(latency, config.isTablistUseCustomGlyphs());
-                    if (displayName != null) {
-                        Component pingComp = Component.text(" " + pingText);
-                        entry.setDisplayName(entry.getDisplayName().append(pingComp));
+                    if (config.isTablistFormatPing()) {
+                        int latency = entry.getLatency();
+                        String pingGlyph = PingGlyphs.formatPing(latency, config.isTablistUseCustomGlyphs());
+                        translated = translated.append(Component.text(" " + pingGlyph));
                     }
+
+                    entry.setDisplayName(translated);
                 }
             }
         } catch (Throwable ignored) {}

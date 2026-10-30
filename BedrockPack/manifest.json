@@ -2,16 +2,16 @@
   "format_version": 2,
   "header": {
     "name": "ColorfulBedrock - Java Polish for Bedrock",
-    "description": "Java font parity, Scoreboard without red numbers, Holograms without black box & Tab list",
-    "uuid": "7f26891c-fa11-454c-97ca-e88e1d44555d",
-    "version": [1, 0, 1],
+    "description": "Java font parity, Clean Scoreboard without red numbers, Hologram polish & Tab list",
+    "uuid": "949e3022-3ce4-4dd7-958f-d9357f09fc2c",
+    "version": [1, 0, 3],
     "min_engine_version": [1, 20, 0]
   },
   "modules": [
     {
       "type": "resources",
-      "uuid": "91986279-8f88-41ea-ba5d-ecfd4b064b6f",
-      "version": [1, 0, 1]
+      "uuid": "1b5ccf12-579a-4072-abbe-9cf26f6a7ae1",
+      "version": [1, 0, 3]
     }
   ]
 }

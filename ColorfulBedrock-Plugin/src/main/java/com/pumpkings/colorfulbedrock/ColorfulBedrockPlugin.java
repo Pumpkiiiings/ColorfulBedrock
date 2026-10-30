@@ -22,20 +22,23 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
     public void onLoad() {
         // 1. Build and set PacketEvents API for Spigot/Paper
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
-        // 2. Load PacketEvents
+
+        // 2. Fix server version if custom fork breaks version detection
+        fixPacketEventsVersion();
+
+        // 3. Load PacketEvents
         PacketEvents.getAPI().load();
     }
 
     @Override
     public void onEnable() {
-        // Save and load configuration
         saveDefaultConfig();
         pluginConfig.load(getConfig());
 
-        // 3. Initialize PacketEvents
+        // 4. Initialize PacketEvents
         PacketEvents.getAPI().init();
 
-        // Fix PacketEvents server version if custom fork falsely detects 1.8.8
+        // Ensure version is set properly even after init
         fixPacketEventsVersion();
 
         // Register Packet Listener for Bedrock players
@@ -44,7 +47,6 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
                 PacketListenerPriority.NORMAL
         );
 
-        // Register reload command
         if (getCommand("colorfulbedrock") != null) {
             getCommand("colorfulbedrock").setExecutor(this);
         }
@@ -61,21 +63,19 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
     private void fixPacketEventsVersion() {
         try {
             ServerManager serverManager = PacketEvents.getAPI().getServerManager();
-            if (serverManager.getVersion() == ServerVersion.V_1_8_8) {
-                // The server fork broke version string checking, force to modern 1.21
+            if (serverManager != null && (serverManager.getVersion() == null || serverManager.getVersion() == ServerVersion.V_1_8_8)) {
                 Field field = serverManager.getClass().getDeclaredField("serverVersion");
                 field.setAccessible(true);
                 field.set(serverManager, ServerVersion.V_1_21_1);
-                getLogger().info("Fixed PacketEvents version detection: Overridden to V_1_21_1!");
+                getLogger().info("Corrected PacketEvents server version: Forced to V_1_21_1!");
             }
         } catch (Throwable t) {
-            getLogger().warning("Could not override PacketEvents version: " + t.getMessage());
+            // Version already set or inaccessible
         }
     }
 
     @Override
     public void onDisable() {
-        // 4. Terminate PacketEvents safely on shutdown
         PacketEvents.getAPI().terminate();
         getLogger().info("ColorfulBedrock has been disabled.");
     }
