@@ -1,6 +1,10 @@
 {
   "namespace": "hud",
 
+  "chat_label": {
+    "shadow": true
+  },
+
   "root_panel": {
     "modifications": [
       {

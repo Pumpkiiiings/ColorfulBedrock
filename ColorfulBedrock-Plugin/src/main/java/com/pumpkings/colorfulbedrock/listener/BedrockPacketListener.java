@@ -74,8 +74,38 @@ public class BedrockPacketListener implements PacketListener {
         if (config.isHologramsEnabled()) {
             if (event.getPacketType() == PacketType.Play.Server.ENTITY_METADATA) {
                 handleEntityMetadata(event);
+                return;
             }
         }
+
+        // 4. Handle Chat Packets (Hex & Emojis parity for Bedrock)
+        if (event.getPacketType() == PacketType.Play.Server.SYSTEM_CHAT_MESSAGE) {
+            handleSystemChatMessage(event);
+            return;
+        }
+        if (event.getPacketType() == PacketType.Play.Server.DISGUISED_CHAT) {
+            handleDisguisedChat(event);
+        }
+    }
+
+    private void handleSystemChatMessage(PacketSendEvent event) {
+        try {
+            WrapperPlayServerSystemChatMessage wrapper = new WrapperPlayServerSystemChatMessage(event);
+            Component message = wrapper.getMessage();
+            if (message != null) {
+                wrapper.setMessage(ComponentBedrockTranslator.translate(message));
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void handleDisguisedChat(PacketSendEvent event) {
+        try {
+            WrapperPlayServerDisguisedChat wrapper = new WrapperPlayServerDisguisedChat(event);
+            Component message = wrapper.getMessage();
+            if (message != null) {
+                wrapper.setMessage(ComponentBedrockTranslator.translate(message));
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void handleScoreboardObjective(PacketSendEvent event) {

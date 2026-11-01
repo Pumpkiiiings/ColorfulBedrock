@@ -1,0 +1,15 @@
+{
+  "namespace": "chat",
+
+  "chat_label": {
+    "shadow": true
+  },
+
+  "chat_message_label": {
+    "shadow": true
+  },
+
+  "chat_text": {
+    "shadow": true
+  }
+}
