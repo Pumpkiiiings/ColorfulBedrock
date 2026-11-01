@@ -209,9 +209,9 @@ public class BedrockPacketListener implements PacketListener {
                     ((EntityData<Component>) data).setValue(ComponentBedrockTranslator.translate(comp));
                 }
 
-                // Index 17: Background ARGB Color
+                // Index 17: Background ARGB Color (TextDisplay only: must be Integer)
                 // Remove black box: force alpha to 0x00000000
-                if (index == 17 && config.isHologramsRemoveBlackBox()) {
+                if (index == 17 && config.isHologramsRemoveBlackBox() && val instanceof Integer) {
                     ((EntityData<Integer>) data).setValue(0x00000000);
                 }
 
