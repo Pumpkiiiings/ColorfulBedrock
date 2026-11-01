@@ -85,7 +85,51 @@ public class BedrockPacketListener implements PacketListener {
         }
         if (event.getPacketType() == PacketType.Play.Server.DISGUISED_CHAT) {
             handleDisguisedChat(event);
+            return;
         }
+
+        // 5. Handle Action Bar & Title Packets
+        if (event.getPacketType() == PacketType.Play.Server.ACTION_BAR) {
+            handleActionBar(event);
+            return;
+        }
+        if (event.getPacketType() == PacketType.Play.Server.SET_TITLE_TEXT) {
+            handleSetTitleText(event);
+            return;
+        }
+        if (event.getPacketType() == PacketType.Play.Server.SET_TITLE_SUBTITLE) {
+            handleSetTitleSubtitle(event);
+        }
+    }
+
+    private void handleActionBar(PacketSendEvent event) {
+        try {
+            WrapperPlayServerActionBar wrapper = new WrapperPlayServerActionBar(event);
+            Component text = wrapper.getActionBarText();
+            if (text != null) {
+                wrapper.setActionBarText(ComponentBedrockTranslator.translate(text));
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void handleSetTitleText(PacketSendEvent event) {
+        try {
+            WrapperPlayServerSetTitleText wrapper = new WrapperPlayServerSetTitleText(event);
+            Component title = wrapper.getTitle();
+            if (title != null) {
+                wrapper.setTitle(ComponentBedrockTranslator.translate(title));
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void handleSetTitleSubtitle(PacketSendEvent event) {
+        try {
+            WrapperPlayServerSetTitleSubtitle wrapper = new WrapperPlayServerSetTitleSubtitle(event);
+            Component subtitle = wrapper.getSubtitle();
+            if (subtitle != null) {
+                wrapper.setSubtitle(ComponentBedrockTranslator.translate(subtitle));
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void handleSystemChatMessage(PacketSendEvent event) {

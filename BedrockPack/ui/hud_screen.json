@@ -5,6 +5,19 @@
     "shadow": true
   },
 
+  "hud_actionbar_text": {
+    "type": "image",
+    "texture": "textures/ui/transparent",
+    "controls": [
+      {
+        "actionbar_message": {
+          "type": "label",
+          "shadow": true
+        }
+      }
+    ]
+  },
+
   "root_panel": {
     "modifications": [
       {
