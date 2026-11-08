@@ -54,6 +54,30 @@ public final class EmojiTranslator {
         // UI Arrows -> \uE019, \uE01A
         REPLACEMENTS.put("\u25B6", "\uE019");       // ▶ Right Triangle
         REPLACEMENTS.put("\u25C0", "\uE01A");       // ◀ Left Triangle
+
+        // Fire & Elements -> \uE01B
+        REPLACEMENTS.put("\uD83D\uDD25", "\uE01B"); // 🔥 Fire
+
+        // Water & Waves -> \uE01C
+        REPLACEMENTS.put("\uD83C\uDF0A", "\uE01C"); // 🌊 Water Wave
+
+        // Mining & Tools -> \uE01D
+        REPLACEMENTS.put("\u26CF", "\uE01D");       // ⛏ Pickaxe
+
+        // Ideas & Warnings -> \uE01E
+        REPLACEMENTS.put("\uD83D\uDCA1", "\uE01E"); // 💡 Light Bulb
+        REPLACEMENTS.put("\u26A0", "\uE01E");       // ⚠ Warning Sign
+
+        // Smiles & Social -> \uE01F
+        REPLACEMENTS.put("\u263B", "\uE01F");       // ☻ Smiling Face
+        REPLACEMENTS.put("\u263A", "\uE01F");       // ☺ White Smiling Face
+
+        // Hourglasses & Bullets
+        REPLACEMENTS.put("\u231B", "\uE014");       // ⌛ Hourglass
+        REPLACEMENTS.put("\u2022", "\u25CF");       // • Bullet -> Black Circle
+
+        // Cyrillic Small Dze used as Small Caps s -> Latin Small Capital ꜱ
+        REPLACEMENTS.put("\u0455", "\uA731");
     }
 
     private EmojiTranslator() {}

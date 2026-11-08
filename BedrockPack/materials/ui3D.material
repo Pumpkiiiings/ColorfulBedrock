@@ -1,0 +1,37 @@
+{
+  "materials": {
+    "version": "1.0.0",
+    "name_tag": {
+      "+states": [
+        "DisableColorWrite",
+        "DisableAlphaWrite"
+      ],
+      "blendSrc": "Zero",
+      "blendDst": "One"
+    },
+    "name_tag_with_backface:name_tag": {
+      "+states": [
+        "DisableColorWrite",
+        "DisableAlphaWrite"
+      ]
+    },
+    "name_tag_depth_tested:name_tag": {
+      "+states": [
+        "DisableColorWrite",
+        "DisableAlphaWrite"
+      ]
+    },
+    "name_tag_depth_tested_with_backface:name_tag_depth_tested": {
+      "+states": [
+        "DisableColorWrite",
+        "DisableAlphaWrite"
+      ]
+    },
+    "name_tag_alpha_tested:name_tag": {
+      "+states": [
+        "DisableColorWrite",
+        "DisableAlphaWrite"
+      ]
+    }
+  }
+}
