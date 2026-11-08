@@ -108,6 +108,8 @@ public class BedrockPacketListener implements PacketListener {
             Component text = wrapper.getActionBarText();
             if (text != null) {
                 wrapper.setActionBarText(ComponentBedrockTranslator.translate(text));
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -118,6 +120,8 @@ public class BedrockPacketListener implements PacketListener {
             Component title = wrapper.getTitle();
             if (title != null) {
                 wrapper.setTitle(ComponentBedrockTranslator.translate(title));
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -128,6 +132,8 @@ public class BedrockPacketListener implements PacketListener {
             Component subtitle = wrapper.getSubtitle();
             if (subtitle != null) {
                 wrapper.setSubtitle(ComponentBedrockTranslator.translate(subtitle));
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -138,6 +144,8 @@ public class BedrockPacketListener implements PacketListener {
             Component message = wrapper.getMessage();
             if (message != null) {
                 wrapper.setMessage(ComponentBedrockTranslator.translate(message));
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -148,6 +156,8 @@ public class BedrockPacketListener implements PacketListener {
             Component message = wrapper.getMessage();
             if (message != null) {
                 wrapper.setMessage(ComponentBedrockTranslator.translate(message));
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -158,6 +168,8 @@ public class BedrockPacketListener implements PacketListener {
             Component displayName = wrapper.getDisplayName();
             if (displayName != null && config.isScoreboardConvertHex()) {
                 wrapper.setDisplayName(ComponentBedrockTranslator.translate(displayName));
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -165,18 +177,29 @@ public class BedrockPacketListener implements PacketListener {
     private void handleUpdateScore(PacketSendEvent event) {
         try {
             WrapperPlayServerUpdateScore wrapper = new WrapperPlayServerUpdateScore(event);
+            boolean modified = false;
 
             // Modern 1.20.3+ display component
             Component displayComp = wrapper.getEntityDisplayName();
             if (displayComp != null && config.isScoreboardConvertHex()) {
                 wrapper.setEntityDisplayName(ComponentBedrockTranslator.translate(displayComp));
+                modified = true;
             }
 
             // Legacy entity name line
             String entityName = wrapper.getEntityName();
             if (entityName != null && config.isScoreboardConvertHex()) {
                 String emojiTranslated = EmojiTranslator.translate(entityName);
-                wrapper.setEntityName(BedrockColorConverter.translateHexToBedrock(emojiTranslated));
+                String bedrockColor = BedrockColorConverter.translateHexToBedrock(emojiTranslated);
+                if (!bedrockColor.equals(entityName)) {
+                    wrapper.setEntityName(bedrockColor);
+                    modified = true;
+                }
+            }
+
+            if (modified) {
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -202,6 +225,10 @@ public class BedrockPacketListener implements PacketListener {
                 if (displayName != null) {
                     info.setDisplayName(ComponentBedrockTranslator.translate(displayName));
                 }
+
+                wrapper.setTeamInfo(info);
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -211,18 +238,26 @@ public class BedrockPacketListener implements PacketListener {
             WrapperPlayServerPlayerListHeaderAndFooter wrapper =
                     new WrapperPlayServerPlayerListHeaderAndFooter(event);
 
+            boolean modified = false;
             Component header = wrapper.getHeader();
             if (header != null) {
                 String bedrockHeader = ComponentBedrockTranslator.toBedrockString(header);
                 plugin.setLatestHeader(bedrockHeader);
-                wrapper.setHeader(Component.text(bedrockHeader));
+                wrapper.setHeader(ComponentBedrockTranslator.translate(header));
+                modified = true;
             }
 
             Component footer = wrapper.getFooter();
             if (footer != null) {
                 String bedrockFooter = ComponentBedrockTranslator.toBedrockString(footer);
                 plugin.setLatestFooter(bedrockFooter);
-                wrapper.setFooter(Component.text(bedrockFooter));
+                wrapper.setFooter(ComponentBedrockTranslator.translate(footer));
+                modified = true;
+            }
+
+            if (modified) {
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -233,6 +268,7 @@ public class BedrockPacketListener implements PacketListener {
             List<WrapperPlayServerPlayerInfoUpdate.PlayerInfo> entries = wrapper.getEntries();
             if (entries == null) return;
 
+            boolean modified = false;
             for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo entry : entries) {
                 Component displayName = entry.getDisplayName();
 
@@ -247,7 +283,13 @@ public class BedrockPacketListener implements PacketListener {
                     }
 
                     entry.setDisplayName(translated);
+                    modified = true;
                 }
+            }
+
+            if (modified) {
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }
@@ -259,6 +301,7 @@ public class BedrockPacketListener implements PacketListener {
             List<? extends EntityData<?>> metadataList = wrapper.getEntityMetadata();
             if (metadataList == null) return;
 
+            boolean modified = false;
             for (EntityData<?> data : metadataList) {
                 int index = data.getIndex();
                 Object val = data.getValue();
@@ -271,9 +314,11 @@ public class BedrockPacketListener implements PacketListener {
                             ((EntityData<Optional<Component>>) data).setValue(
                                     Optional.of(ComponentBedrockTranslator.translate(comp))
                             );
+                            modified = true;
                         }
                     } else if (val instanceof Component comp) {
                         ((EntityData<Component>) data).setValue(ComponentBedrockTranslator.translate(comp));
+                        modified = true;
                     }
                 }
 
@@ -281,18 +326,26 @@ public class BedrockPacketListener implements PacketListener {
                 // Index 15: Text component
                 if (index == 15 && val instanceof Component comp && config.isHologramsConvertHex()) {
                     ((EntityData<Component>) data).setValue(ComponentBedrockTranslator.translate(comp));
+                    modified = true;
                 }
 
                 // Index 17: Background ARGB Color (TextDisplay only: must be Integer)
                 // Remove black box: force alpha to 0x00000000
                 if (index == 17 && config.isHologramsRemoveBlackBox() && val instanceof Integer) {
                     ((EntityData<Integer>) data).setValue(0x00000000);
+                    modified = true;
                 }
 
                 // Index 19: Display Flags (Bit 0x01 = Shadow)
                 if (index == 19 && config.isHologramsForceShadow() && val instanceof Byte flags) {
                     ((EntityData<Byte>) data).setValue((byte) (flags | 0x01));
+                    modified = true;
                 }
+            }
+
+            if (modified) {
+                wrapper.write();
+                event.markForReEncode(true);
             }
         } catch (Throwable ignored) {}
     }

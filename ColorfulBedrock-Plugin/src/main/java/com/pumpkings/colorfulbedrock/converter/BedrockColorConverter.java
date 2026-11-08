@@ -2,45 +2,48 @@ package com.pumpkings.colorfulbedrock.converter;
 
 import java.awt.Color;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * High-performance Color Matcher for Minecraft Bedrock.
- * Quantizes 24-bit Java RGB colors and gradients to Bedrock's full 27-color extended palette.
+ * Perceptual Color Matcher for Minecraft Bedrock parity.
+ * Accurately translates 24-bit RGB colors and gradients into Bedrock's
+ * saturated color palette using perceptual HSB hue preservation.
  */
 public final class BedrockColorConverter {
 
     private static final Pattern HEX_PATTERN_1 = Pattern.compile("§x(§[0-9a-fA-F]){6}");
     private static final Pattern HEX_PATTERN_2 = Pattern.compile("&#([0-9a-fA-F]{6})");
     private static final Pattern HEX_PATTERN_3 = Pattern.compile("<#([0-9a-fA-F]{6})>");
-    private static final Pattern HEX_PATTERN_4 = Pattern.compile("<color:#([0-9a-fA-F]{6})>");
-    private static final Pattern TAGS_CLEANUP_PATTERN = Pattern.compile("</?(?:shadow|gradient|b|i|u|st|color)[^>]*>");
+    private static final Pattern HEX_PATTERN_4 = Pattern.compile("<color:#([0-9a-fA-F]{6})>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TAGS_CLEANUP_PATTERN = Pattern.compile("</?(?:shadow|gradient|b|i|u|st|color)[^>]*>", Pattern.CASE_INSENSITIVE);
 
-    // Bedrock's complete extended palette: Vanilla 16 + 11 Modern Bedrock material colors = 27 colors
+    // Bedrock vanilla 16 + extended material colors
     private static final Map<String, Color> BEDROCK_PALETTE;
+    private static final Set<String> ACHROMATIC = Set.of("§0", "§7", "§8", "§f", "§h", "§i", "§j");
 
     static {
-        Map<String, Color> map = new HashMap<>();
+        Map<String, Color> map = new LinkedHashMap<>();
         // Standard Minecraft 16 colors
-        map.put("§0", new Color(0, 0, 0));
-        map.put("§1", new Color(0, 0, 170));
-        map.put("§2", new Color(0, 170, 0));
-        map.put("§3", new Color(0, 170, 170));
-        map.put("§4", new Color(170, 0, 0));
-        map.put("§5", new Color(170, 0, 170));
-        map.put("§6", new Color(255, 170, 0));
-        map.put("§7", new Color(170, 170, 170));
-        map.put("§8", new Color(85, 85, 85));
-        map.put("§9", new Color(85, 85, 255));
-        map.put("§a", new Color(85, 255, 85));
-        map.put("§b", new Color(85, 255, 255));
-        map.put("§c", new Color(255, 85, 85));
-        map.put("§d", new Color(255, 85, 255));
-        map.put("§e", new Color(255, 255, 85));
-        map.put("§f", new Color(255, 255, 255));
+        map.put("§0", new Color(0, 0, 0));       // Black
+        map.put("§1", new Color(0, 0, 170));     // Dark Blue
+        map.put("§2", new Color(0, 170, 0));     // Dark Green
+        map.put("§3", new Color(0, 170, 170));   // Dark Aqua
+        map.put("§4", new Color(170, 0, 0));     // Dark Red
+        map.put("§5", new Color(170, 0, 170));   // Dark Purple
+        map.put("§6", new Color(255, 170, 0));   // Gold / Orange
+        map.put("§7", new Color(170, 170, 170)); // Gray
+        map.put("§8", new Color(85, 85, 85));    // Dark Gray
+        map.put("§9", new Color(85, 85, 255));   // Blue
+        map.put("§a", new Color(85, 255, 85));   // Green / Lime
+        map.put("§b", new Color(85, 255, 255));  // Aqua / Cyan
+        map.put("§c", new Color(255, 85, 85));   // Red
+        map.put("§d", new Color(255, 85, 255));  // Light Purple / Pink
+        map.put("§e", new Color(255, 255, 85));  // Yellow
+        map.put("§f", new Color(255, 255, 255)); // White
 
         // Extended Bedrock-native material codes
         map.put("§g", new Color(221, 214, 5));   // Minecoin Gold (#DDD605)
@@ -61,37 +64,90 @@ public final class BedrockColorConverter {
     private BedrockColorConverter() {}
 
     /**
-     * Finds the closest Bedrock native color code for a given RGB Color
-     * using human eye weighted Euclidean distance (Redmean formula).
+     * Finds the closest Bedrock color code using perceptual HSB hue matching.
+     * Guarantees chromatic saturation so colorful Java text never washes out to gray.
      */
-    public static String getClosestBedrockColor(Color color) {
-        if (color == null) return "§f";
+    public static String getClosestBedrockColor(Color target) {
+        if (target == null) return "§f";
 
-        String closestCode = "§f";
-        double minDistance = Double.MAX_VALUE;
+        float[] hsbTarget = Color.RGBtoHSB(target.getRed(), target.getGreen(), target.getBlue(), null);
+        float hTarget = hsbTarget[0];
+        float sTarget = hsbTarget[1];
+        float bTarget = hsbTarget[2];
 
-        for (Map.Entry<String, Color> entry : BEDROCK_PALETTE.entrySet()) {
-            Color paletteColor = entry.getValue();
+        boolean isTargetChromatic = sTarget > 0.18f && bTarget > 0.15f;
 
-            double rmean = (color.getRed() + paletteColor.getRed()) / 2.0;
-            double r = color.getRed() - paletteColor.getRed();
-            double g = color.getGreen() - paletteColor.getGreen();
-            double b = color.getBlue() - paletteColor.getBlue();
+        // 1. Priority Hue Specializations for high-profile UI palettes
+        if (isTargetChromatic) {
+            // Bright pink / rose / magenta (e.g. #FF258F Shards)
+            if (hTarget >= 0.88f && hTarget <= 0.94f && bTarget > 0.6f && sTarget > 0.4f) {
+                return "§d"; // Pink
+            }
 
-            // Weighted RGB distance (Redmean formula)
-            double weightR = 2.0 + (rmean / 256.0);
-            double weightG = 4.0;
-            double weightB = 2.0 + ((255.0 - rmean) / 256.0);
+            // Crimson / Ruby Red (e.g. #FF1C59 Muertes)
+            if ((hTarget > 0.94f || hTarget < 0.04f) && bTarget > 0.5f) {
+                return "§c"; // Red
+            }
 
-            double distance = (weightR * r * r) + (weightG * g * g) + (weightB * b * b);
+            // Soft diamond / Sky blue / Aqua (e.g. #75B3FF Asesinatos)
+            if (hTarget >= 0.54f && hTarget <= 0.60f && bTarget > 0.65f) {
+                return "§b"; // Aqua
+            }
 
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestCode = entry.getKey();
+            // Vivid Blue (e.g. #5489FF)
+            if (hTarget > 0.60f && hTarget <= 0.68f) {
+                return "§9"; // Blue
+            }
+
+            // Lime / Bright Green (e.g. #7DFFA8 Jugando +)
+            if (hTarget >= 0.28f && hTarget <= 0.42f && bTarget > 0.6f) {
+                return "§a"; // Lime
+            }
+
+            // Warm Gold / Orange (e.g. #FFDB02, #FFA01F mc.colorfulsmp.us)
+            if (hTarget >= 0.08f && hTarget <= 0.15f) {
+                return "§6"; // Gold
             }
         }
 
-        return closestCode;
+        // 2. Perceptual Hue-weighted search
+        String bestCode = "§f";
+        double minScore = Double.MAX_VALUE;
+
+        for (Map.Entry<String, Color> entry : BEDROCK_PALETTE.entrySet()) {
+            String code = entry.getKey();
+            Color pal = entry.getValue();
+
+            // Prevent vibrant colors from collapsing to dull gray/white
+            if (isTargetChromatic && ACHROMATIC.contains(code)) {
+                continue;
+            }
+
+            float[] hsbPal = Color.RGBtoHSB(pal.getRed(), pal.getGreen(), pal.getBlue(), null);
+            float hPal = hsbPal[0];
+            float sPal = hsbPal[1];
+            float bPal = hsbPal[2];
+
+            double hDiff = Math.abs(hTarget - hPal);
+            if (hDiff > 0.5) hDiff = 1.0 - hDiff;
+
+            double sDiff = Math.abs(sTarget - sPal);
+            double bDiff = Math.abs(bTarget - bPal);
+
+            double score;
+            if (isTargetChromatic) {
+                score = (hDiff * 7.0) + (sDiff * 2.0) + (bDiff * 1.5);
+            } else {
+                score = (sDiff * 1.0) + (bDiff * 4.0);
+            }
+
+            if (score < minScore) {
+                minScore = score;
+                bestCode = code;
+            }
+        }
+
+        return bestCode;
     }
 
     /**
@@ -108,41 +164,41 @@ public final class BedrockColorConverter {
 
         // 2. Match §x§r§r§g§g§b§b (Kyori Adventure hex output)
         Matcher matcher1 = HEX_PATTERN_1.matcher(result);
-        StringBuffer sb1 = new StringBuffer();
+        StringBuilder sb1 = new StringBuilder();
         while (matcher1.find()) {
             String hexGroup = matcher1.group().replace("§x", "").replace("§", "");
             Color color = hexToColor(hexGroup);
-            matcher1.appendReplacement(sb1, getClosestBedrockColor(color));
+            matcher1.appendReplacement(sb1, Matcher.quoteReplacement(getClosestBedrockColor(color)));
         }
         matcher1.appendTail(sb1);
         result = sb1.toString();
 
         // 3. Match &#RRGGBB
         Matcher matcher2 = HEX_PATTERN_2.matcher(result);
-        StringBuffer sb2 = new StringBuffer();
+        StringBuilder sb2 = new StringBuilder();
         while (matcher2.find()) {
             Color color = hexToColor(matcher2.group(1));
-            matcher2.appendReplacement(sb2, getClosestBedrockColor(color));
+            matcher2.appendReplacement(sb2, Matcher.quoteReplacement(getClosestBedrockColor(color)));
         }
         matcher2.appendTail(sb2);
         result = sb2.toString();
 
         // 4. Match <#RRGGBB>
         Matcher matcher3 = HEX_PATTERN_3.matcher(result);
-        StringBuffer sb3 = new StringBuffer();
+        StringBuilder sb3 = new StringBuilder();
         while (matcher3.find()) {
             Color color = hexToColor(matcher3.group(1));
-            matcher3.appendReplacement(sb3, getClosestBedrockColor(color));
+            matcher3.appendReplacement(sb3, Matcher.quoteReplacement(getClosestBedrockColor(color)));
         }
         matcher3.appendTail(sb3);
         result = sb3.toString();
 
         // 5. Match <color:#RRGGBB>
         Matcher matcher4 = HEX_PATTERN_4.matcher(result);
-        StringBuffer sb4 = new StringBuffer();
+        StringBuilder sb4 = new StringBuilder();
         while (matcher4.find()) {
             Color color = hexToColor(matcher4.group(1));
-            matcher4.appendReplacement(sb4, getClosestBedrockColor(color));
+            matcher4.appendReplacement(sb4, Matcher.quoteReplacement(getClosestBedrockColor(color)));
         }
         matcher4.appendTail(sb4);
         result = sb4.toString();

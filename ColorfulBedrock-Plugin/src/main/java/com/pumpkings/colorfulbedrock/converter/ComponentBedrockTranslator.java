@@ -16,11 +16,17 @@ public final class ComponentBedrockTranslator {
                     .useUnusualXRepeatedCharacterHexFormat()
                     .build();
 
+    private static final LegacyComponentSerializer LEGACY_DESERIALIZER =
+            LegacyComponentSerializer.builder()
+                    .character('§')
+                    .build();
+
     private ComponentBedrockTranslator() {}
 
     /**
      * Translates a Component by preserving 24-bit hex, converting emojis,
-     * quantizing RGB colors to Bedrock codes, and returning a Bedrock-safe component.
+     * quantizing RGB colors to Bedrock codes, and returning a Bedrock-safe component
+     * with explicit text colors on each node so Geyser/Floodgate renders authentic colors.
      */
     public static Component translate(Component component) {
         if (component == null) return Component.empty();
@@ -29,7 +35,7 @@ public final class ComponentBedrockTranslator {
         String emojisTranslated = EmojiTranslator.translate(legacy);
         String bedrockFormatted = BedrockColorConverter.translateHexToBedrock(emojisTranslated);
 
-        return Component.text(bedrockFormatted);
+        return LEGACY_DESERIALIZER.deserialize(bedrockFormatted);
     }
 
     /**

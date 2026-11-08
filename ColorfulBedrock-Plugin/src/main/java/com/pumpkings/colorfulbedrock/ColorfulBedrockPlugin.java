@@ -27,10 +27,13 @@ public final class ColorfulBedrockPlugin extends JavaPlugin implements CommandEx
         // 1. Build and set PacketEvents API for Spigot/Paper
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
 
-        // 2. Fix server version if custom fork breaks version detection
+        // 2. Enable packet re-encoding by default for Bedrock packet modification reliability
+        PacketEvents.getAPI().getSettings().reEncodeByDefault(true);
+
+        // 3. Fix server version if custom fork breaks version detection
         fixPacketEventsVersion();
 
-        // 3. Load PacketEvents
+        // 4. Load PacketEvents
         PacketEvents.getAPI().load();
     }
 
